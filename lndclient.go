@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"time"
+	"strings"
 
 	"github.com/lightningnetwork/lnd/lnrpc"
 	"github.com/lightningnetwork/lnd/lnrpc/routerrpc"
@@ -168,8 +170,22 @@ func NewLndClient(cfg *LndConfig) (*lndclientGrpc, error) {
 	}
 
 	mac := &macaroon.Macaroon{}
+
+	//Try to decode as binary first, then as hex
 	if err = mac.UnmarshalBinary(macBytes); err != nil {
-		return nil, fmt.Errorf("unable to decode macaroon: %v", err)
+		// If that fails, try to decode as hex
+		hexStr := strings.ReplaceAll(string(macBytes), " ", "")
+		hexStr = strings.ReplaceAll(hexStr, "\n", "")
+		decodedHex, decodeErr := hex.DecodeString(hexStr)
+		if decodeErr != nil {
+			// Both decoding attempts failed
+			return nil, fmt.Errorf("unable to decode macaroon: binary decoding failed (%v), hex decoding failed (%v)", err, decodeErr)
+		}
+
+		// Attempt to unmarshal the decoded hex bytes
+		if err = mac.UnmarshalBinary(decodedHex); err != nil {
+			return nil, fmt.Errorf("unable to decode macaroon: %v", err)
+		}
 	}
 
 	// Now we append the macaroon credentials to the dial options.
