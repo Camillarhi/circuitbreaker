@@ -174,8 +174,7 @@ func NewLndClient(cfg *LndConfig) (*lndclientGrpc, error) {
 	//Try to decode as binary first, then as hex
 	if err = mac.UnmarshalBinary(macBytes); err != nil {
 		// If that fails, try to decode as hex
-		hexStr := strings.ReplaceAll(string(macBytes), " ", "")
-		hexStr = strings.ReplaceAll(hexStr, "\n", "")
+		hexStr := strings.TrimSpace(string(macBytes))
 		decodedHex, decodeErr := hex.DecodeString(hexStr)
 		if decodeErr != nil {
 			// Both decoding attempts failed
